@@ -5,10 +5,14 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/ArinPandey01/secret-vault-cli/db"
 )
 
 func randomBytes(size int) ([]byte, error) {
@@ -44,7 +48,7 @@ func encrypt(key []byte, secret string) ([]byte, []byte, error) {
 	return ciphertext, nonce, nil
 }
 
-func Create() (string, error) {
+func Create(conn *sql.DB) ([]byte, int64, error) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Enter time to live(Default=5m)")
@@ -54,8 +58,10 @@ func Create() (string, error) {
 
 	ok := scanner.Scan()
 	if !ok {
-		fmt.Printf("Error has occured: %v", scanner.Err())
-		return "", scanner.Err()
+		if err := scanner.Err(); err != nil {
+			return nil, 0, err
+		}
+		return nil, 0, io.EOF
 	}
 
 	input := scanner.Text()
@@ -66,7 +72,7 @@ func Create() (string, error) {
 		ttl, err = time.ParseDuration(strings.TrimSpace(input))
 		if err != nil {
 			fmt.Println("For ttl use one of these format: <n>s, <n>m, <n>h")
-			return "", err
+			return nil, 0, err
 		}
 	}
 
@@ -76,8 +82,10 @@ func Create() (string, error) {
 
 	ok = scanner.Scan()
 	if !ok {
-		fmt.Printf("Error has occured: %v", scanner.Err())
-		return "", scanner.Err()
+		if err := scanner.Err(); err != nil {
+			return nil, 0, err
+		}
+		return nil, 0, io.EOF
 	}
 
 	input = scanner.Text()
@@ -85,17 +93,23 @@ func Create() (string, error) {
 	key, err := randomBytes(32)
 	if err != nil {
 		fmt.Printf("Error has occured: %v", err)
-		return "", err
+		return nil, 0, err
 	}
 
 	ciphertext, nonce, err := encrypt(key, input)
 	if err != nil {
 		fmt.Printf("Error has occured: %v", err)
-		return "", err
+		return nil, 0, err
 	}
 
+	id, err := db.InsertSecret(conn, ciphertext, nonce, time.Now().Add(ttl))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	fmt.Printf("ID: %d\n", id)
 	fmt.Printf("Ciphertext: %x\n", ciphertext)
 	fmt.Printf("Nonce: %x\n", nonce)
 
-	return input, nil // later this becomes ID/key output
+	return key, id, nil
 }
