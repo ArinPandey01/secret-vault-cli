@@ -8,10 +8,10 @@ import (
 )
 
 type DB struct {
-	id         int
-	ciphertext []byte
-	nonce      []byte
-	expireAt   time.Time
+	ID         int64
+	Ciphertext []byte
+	Nonce      []byte
+	ExpireAt   time.Time
 }
 
 func InitDB() (*sql.DB, error) {
@@ -64,7 +64,7 @@ func GetSecret(db *sql.DB, id int64) (*DB, error) {
 	row := db.QueryRow(selectQuery, id)
 
 	var secret DB
-	err := row.Scan(&secret.id, &secret.ciphertext, &secret.nonce, &secret.expireAt)
+	err := row.Scan(&secret.ID, &secret.Ciphertext, &secret.Nonce, &secret.ExpireAt)
 	if err != nil {
 		return nil, err
 	}

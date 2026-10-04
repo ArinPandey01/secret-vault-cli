@@ -6,6 +6,7 @@ import (
 
 	"github.com/ArinPandey01/secret-vault-cli/create"
 	"github.com/ArinPandey01/secret-vault-cli/db"
+	"github.com/ArinPandey01/secret-vault-cli/retrieve"
 )
 
 func main() {
@@ -36,24 +37,32 @@ func run() error {
 		return nil
 	}
 
-	switch os.Args[1] {
-	case "create":
-		conn, err := db.InitDB()
-		if err != nil {
-			return err
-		}
-		defer conn.Close()
+	command := os.Args[1]
+	if command != "create" && command != "read" {
+		printHelp()
+		return nil
+	}
 
-		key, _, err := create.Create(conn)
+	conn, err := db.InitDB()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	switch command {
+	case "create":
+		key, id, err := create.Create(conn)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("ID: %d\n", id)
 		fmt.Printf("Key: %x\n", key)
 	case "read":
-	case "help":
-		printHelp()
-	default:
-		printHelp()
+		secret, err := retrieve.RetrieveSecret(conn)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Secret: %s\n", secret)
 	}
 
 	return nil

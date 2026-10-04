@@ -51,7 +51,7 @@ func encrypt(key []byte, secret string) ([]byte, []byte, error) {
 func Create(conn *sql.DB) ([]byte, int64, error) {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Println("Enter time to live(Default=5m)")
+	fmt.Fprintln(os.Stderr, "Enter time to live (default: 5m):")
 
 	var ttl time.Duration
 	var err error
@@ -71,14 +71,12 @@ func Create(conn *sql.DB) ([]byte, int64, error) {
 	} else {
 		ttl, err = time.ParseDuration(strings.TrimSpace(input))
 		if err != nil {
-			fmt.Println("For ttl use one of these format: <n>s, <n>m, <n>h")
+			fmt.Fprintln(os.Stderr, "For TTL, use a duration such as 30s, 5m, or 1h")
 			return nil, 0, err
 		}
 	}
 
-	fmt.Println(ttl)
-
-	fmt.Print("Enter your secret: ")
+	fmt.Fprint(os.Stderr, "Enter your secret: ")
 
 	ok = scanner.Scan()
 	if !ok {
@@ -92,13 +90,11 @@ func Create(conn *sql.DB) ([]byte, int64, error) {
 
 	key, err := randomBytes(32)
 	if err != nil {
-		fmt.Printf("Error has occured: %v", err)
 		return nil, 0, err
 	}
 
 	ciphertext, nonce, err := encrypt(key, input)
 	if err != nil {
-		fmt.Printf("Error has occured: %v", err)
 		return nil, 0, err
 	}
 
@@ -106,10 +102,6 @@ func Create(conn *sql.DB) ([]byte, int64, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-
-	fmt.Printf("ID: %d\n", id)
-	fmt.Printf("Ciphertext: %x\n", ciphertext)
-	fmt.Printf("Nonce: %x\n", nonce)
 
 	return key, id, nil
 }
